@@ -233,6 +233,9 @@ public final class CustomDiscManager {
             MusicBoxSong mbSong = new MusicBoxSong(file, songName);
             songsByDiscId.put(discId, mbSong);
             MusicBoxSongManager.registerCustomSongs(Collections.singletonList(mbSong));
+
+            // the first copy comes with the upload: auto-give one disc for free
+            giveUploadedDisc(owner, mbSong, songName);
         } catch (Exception ex) {
             // roll back the saved file so no orphan accumulates on a DB/registration failure
             try {
@@ -247,15 +250,28 @@ public final class CustomDiscManager {
         return UploadResult.ok(Lang.UPLOAD_SUCCESS.toPlainText("{disc}", songName));
     }
 
-    private void notifyUploadSuccess(UUID owner, String songName) {
+    /**
+     * Gives the freshly uploaded disc to its owner once, for free (the first copy
+     * is included with the upload). Drops it at the player's feet when the
+     * inventory is full. Player interaction happens on the player's own region.
+     */
+    private void giveUploadedDisc(UUID owner, MusicBoxSong song, String songName) {
         try {
             Player player = Bukkit.getPlayer(owner);
-            if (player != null && player.isOnline()) {
-                runAtPlayerIfOnline(player, () ->
-                        player.sendMessage(Lang.UPLOAD_SUCCESS.toString("{disc}", songName)));
-            }
+            if (player == null || !player.isOnline())
+                return;
+            FoliaUtils.runAtPlayer(player, () -> {
+                if (!player.isOnline())
+                    return;
+                ItemStack stack = song.getSongStack();
+                HashMap<Integer, ItemStack> left = player.getInventory().addItem(stack);
+                if (!left.isEmpty()) {
+                    player.getWorld().dropItemNaturally(player.getLocation(), stack);
+                }
+                player.sendMessage(Lang.UPLOAD_SUCCESS.toString("{disc}", songName));
+            });
         } catch (Exception ignored) {
-            // player lookup races are harmless here
+            // player went offline mid-flight
         }
     }
 

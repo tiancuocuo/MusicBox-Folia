@@ -598,8 +598,8 @@ public enum Lang {
             "&6Welcome to the custom disc upload page",
             "&6Добро пожаловать на страницу загрузки пластинок"),
     UPLOAD_SUCCESS(
-            "&aUpload successful! Your disc &b{disc}&a is ready in game",
-            "&aЗагрузка успешна! Ваша пластинка &b{disc}&a готова в игре"),
+            "&aUpload successful! You got the disc &b{disc}",
+            "&aЗагрузка успешна! Вы получили пластинку &b{disc}"),
     COMMAND_HELP_UPLOAD(
             "&b/musicbox upload <name>&6 - Upload your custom .nbs disc",
             "&b/musicbox upload <имя>&6 - Загрузить свою .nbs пластинку"),
