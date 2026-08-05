@@ -11,10 +11,10 @@ import ru.spliterash.musicbox.minecraft.nms.jukebox.IJukebox;
  *
  * <p>Unlike the NMS-based implementations this one is pure Bukkit API, so it needs
  * no paperweight dev bundle and keeps working across 26.x releases. Inserting a
- * record without the vanilla jukebox starting to play is done by setting the record
- * and immediately clearing the playing flag inside the same block-state snapshot,
- * then committing it once: the world (and clients) only ever see the final
- * "record present, not playing" state, so no vanilla disc sound ever starts.</p>
+ * record without the vanilla jukebox starting to play is done by writing the
+ * record into the jukebox's inventory slot (jukeboxes are containers since
+ * 1.21.3): the plain container write keeps the record but never starts vanilla
+ * playback, and stopPlaying() is kept as a guard on the playing flag.</p>
  */
 public class V26_2 implements IJukebox {
     private final Block block;
@@ -38,10 +38,11 @@ public class V26_2 implements IJukebox {
         Jukebox jukebox = fresh();
         if (jukebox == null)
             return;
-        // setRecord auto-starts playing inside the snapshot; stopPlaying clears that
-        // flag while keeping the record, so the single update() commits a silent
-        // "record inserted" state.
-        jukebox.setRecord(item);
+        // setRecord() starts the vanilla jukebox music on the live tile entity, so
+        // placing the record through the jukebox's inventory slot is used instead:
+        // the plain container write keeps the record without ever starting vanilla
+        // playback, and stopPlaying() guards the playing flag for good measure.
+        jukebox.getSnapshotInventory().setItem(0, item);
         jukebox.stopPlaying();
         jukebox.update(true, false);
     }
