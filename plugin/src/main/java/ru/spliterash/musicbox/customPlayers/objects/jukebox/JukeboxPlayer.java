@@ -48,9 +48,15 @@ public class JukeboxPlayer extends AbstractBlockPlayer {
         if (JukeboxFactory.jukeboxAvailable()) {
             e.setCancelled(true);
             e.getPlayer().getInventory().setItemInMainHand(null);
-            JukeboxFactory.getJukebox(jukebox).setJukebox(clickedItem);
-
-            createNew(jukebox);
+            try {
+                JukeboxFactory.getJukebox(jukebox).setJukebox(clickedItem);
+                createNew(jukebox);
+            } catch (Throwable t) {
+                // never lose the player's disc: put it back into the hand
+                e.getPlayer().getInventory().setItemInMainHand(clickedItem);
+                MusicBox.getInstance().getLogger().log(
+                        java.util.logging.Level.WARNING, "[MusicBox] Failed to place disc in jukebox", t);
+            }
         } else {
             e.getPlayer().sendMessage(Lang.JUKEBOX_NOT_SUPPORTED.toString());
         }
