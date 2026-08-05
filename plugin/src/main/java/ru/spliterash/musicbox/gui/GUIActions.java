@@ -25,6 +25,7 @@ import ru.spliterash.musicbox.song.songContainers.containers.SingletonContainer;
 import ru.spliterash.musicbox.song.songContainers.types.FullSongContainer;
 import ru.spliterash.musicbox.song.songContainers.types.SongContainer;
 import ru.spliterash.musicbox.utils.EconomyUtils;
+import ru.spliterash.musicbox.utils.FoliaUtils;
 import ru.spliterash.musicbox.utils.ItemUtils;
 
 import java.util.HashMap;
@@ -524,25 +525,31 @@ public class GUIActions {
 
 
     private void applySign(PlayerWrapper wrapper, Sign sign, SongContainer songContainer, Supplier<String> params) {
-        sign.setLine(0, ChatColor.AQUA + songContainer.getNameId());
-        sign.setLine(1, SignPlayer.SIGN_SECOND_LINE);
-        String range = sign.getLine(2);
-        if (range.isEmpty())
-            range = "24";
-        else {
-            try {
-                int rangeInt = Integer.parseInt(range);
-                if (rangeInt > 256) {
-                    rangeInt = 256;
-                }
-                range = String.valueOf(rangeInt);
-            } catch (Exception ex) {
+        Player player = wrapper.getPlayer();
+        // The click handler runs on the player's region, which may differ from the
+        // sign's region if the player walked away with the GUI open. Write the sign
+        // on its own region.
+        FoliaUtils.runAtLocation(sign.getLocation(), () -> {
+            sign.setLine(0, ChatColor.AQUA + songContainer.getNameId());
+            sign.setLine(1, SignPlayer.SIGN_SECOND_LINE);
+            String range = sign.getLine(2);
+            if (range.isEmpty())
                 range = "24";
+            else {
+                try {
+                    int rangeInt = Integer.parseInt(range);
+                    if (rangeInt > 256) {
+                        rangeInt = 256;
+                    }
+                    range = String.valueOf(rangeInt);
+                } catch (Exception ex) {
+                    range = "24";
+                }
             }
-        }
-        sign.setLine(2, ChatColor.RED + range);
-        sign.setLine(3, ChatColor.YELLOW + params.get());
-        sign.update(true);
-        wrapper.getPlayer().closeInventory();
+            sign.setLine(2, ChatColor.RED + range);
+            sign.setLine(3, ChatColor.YELLOW + params.get());
+            sign.update(true);
+        });
+        player.closeInventory();
     }
 }

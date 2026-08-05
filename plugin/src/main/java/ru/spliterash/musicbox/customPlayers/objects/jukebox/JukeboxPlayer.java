@@ -16,7 +16,6 @@ import ru.spliterash.musicbox.customPlayers.interfaces.IPlayList;
 import ru.spliterash.musicbox.minecraft.nms.jukebox.JukeboxFactory;
 import ru.spliterash.musicbox.song.MusicBoxSong;
 import ru.spliterash.musicbox.song.MusicBoxSongManager;
-import ru.spliterash.musicbox.utils.BukkitUtils;
 import ru.spliterash.musicbox.utils.SignUtils;
 
 @Getter
@@ -95,11 +94,10 @@ public class JukeboxPlayer extends AbstractBlockPlayer {
 
     @Override
     protected void every100MillisAsync() {
-        BukkitUtils.runSyncTask(() -> {
-            Block b = getTargetLocation().getBlock();
-            if (!(b.getState() instanceof Jukebox))
-                destroy();
-        });
+        // Already running on this block's region thread (see AbstractBlockPlayer ticker).
+        Block b = getTargetLocation().getBlock();
+        if (!(b.getState() instanceof Jukebox))
+            destroy();
     }
 
     @Override

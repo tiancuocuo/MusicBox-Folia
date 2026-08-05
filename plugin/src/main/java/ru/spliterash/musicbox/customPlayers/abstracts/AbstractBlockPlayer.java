@@ -5,7 +5,6 @@ import lombok.Getter;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.plugin.IllegalPluginAccessException;
-import org.bukkit.scheduler.BukkitRunnable;
 import ru.spliterash.musicbox.MusicBox;
 import ru.spliterash.musicbox.customPlayers.interfaces.IPlayList;
 import ru.spliterash.musicbox.customPlayers.interfaces.MusicBoxSongPlayer;
@@ -13,19 +12,24 @@ import ru.spliterash.musicbox.customPlayers.interfaces.PositionPlayer;
 import ru.spliterash.musicbox.customPlayers.models.MusicBoxSongPlayerModel;
 import ru.spliterash.musicbox.customPlayers.models.RangePlayerModel;
 import ru.spliterash.musicbox.utils.BukkitUtils;
+import ru.spliterash.musicbox.utils.FoliaUtils;
 import ru.spliterash.musicbox.utils.SignUtils;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Getter
 public abstract class AbstractBlockPlayer extends PositionSongPlayer implements PositionPlayer {
-    private final static Map<Location, AbstractBlockPlayer> players = new HashMap<>();
+    // ConcurrentHashMap: players are created/destroyed/looked up from many Folia
+    // region threads concurrently.
+    private final static Map<Location, AbstractBlockPlayer> players = new ConcurrentHashMap<>();
     @Getter
     private final static Collection<AbstractBlockPlayer> all = Collections.unmodifiableCollection(players.values());
     private final MusicBoxSongPlayerModel musicBoxModel;
     private final RangePlayerModel rangePlayerModel;
     private final Location location;
+    private Object tickerHandle;
 
     public AbstractBlockPlayer(IPlayList list, Location location, int range) {
         super(list.getCurrent().getSong());
@@ -38,22 +42,15 @@ public abstract class AbstractBlockPlayer extends PositionSongPlayer implements 
         this.musicBoxModel = new MusicBoxSongPlayerModel(this, list, this::runNextSong);
         this.rangePlayerModel = new RangePlayerModel(musicBoxModel);
         musicBoxModel.runPlayer();
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                while (!isDestroyed()) {
-                    rangePlayerModel.tick();
-                    every100MillisAsync();
-                    try {
-                        //noinspection BusyWait
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                        break;
-                    }
-                }
+        // Periodic integrity check on the block's own region: a SignPlayer verifies the
+        // block is still a powered sign, a JukeboxPlayer that it is still a jukebox.
+        tickerHandle = FoliaUtils.runAtFixedRateAtLocation(this.location, () -> {
+            if (isDestroyed()) {
+                FoliaUtils.cancel(tickerHandle);
+                return;
             }
-        }.runTaskAsynchronously(MusicBox.getInstance());
+            every100MillisAsync();
+        }, 2, 2);
     }
 
     public static <T extends AbstractBlockPlayer> T findByLocation(Location location) {
@@ -120,13 +117,15 @@ public abstract class AbstractBlockPlayer extends PositionSongPlayer implements 
                 songEnd();
             Location infoSign = getInfoSign();
             if (infoSign != null) {
-                BukkitUtils.runSyncTask(() -> {
+                BukkitUtils.runSyncTask(infoSign, () -> {
                     if (!musicBoxModel.isNextCreated())
                         SignUtils.setPlayerOff(infoSign);
                 });
             }
             rangePlayerModel.destroy();
             musicBoxModel.destroy();
+            if (tickerHandle != null)
+                FoliaUtils.cancel(tickerHandle);
         }
     }
 

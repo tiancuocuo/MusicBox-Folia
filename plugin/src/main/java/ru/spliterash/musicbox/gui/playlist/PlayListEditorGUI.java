@@ -1,7 +1,7 @@
 package ru.spliterash.musicbox.gui.playlist;
 
 import com.cryptomorin.xseries.XMaterial;
-import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import ru.spliterash.musicbox.Lang;
 import ru.spliterash.musicbox.MusicBox;
@@ -12,6 +12,7 @@ import ru.spliterash.musicbox.minecraft.gui.actions.ClickAction;
 import ru.spliterash.musicbox.players.PlayerWrapper;
 import ru.spliterash.musicbox.song.MusicBoxSong;
 import ru.spliterash.musicbox.utils.BukkitUtils;
+import ru.spliterash.musicbox.utils.FoliaUtils;
 import ru.spliterash.musicbox.utils.ItemUtils;
 import ru.spliterash.musicbox.utils.classes.PeekList;
 
@@ -77,21 +78,24 @@ public class PlayListEditorGUI {
                 ItemUtils.createStack(XMaterial.PAPER, Lang.SAVE_PLAYLIST_CHANGE.toString(), lore),
                 new ClickAction(
                         () -> {
+                            Player player = wrapper.getPlayer();
                             if (model.getSongs().size() > 0) {
                                 if (saveInProgress) {
-                                    wrapper.getPlayer().sendMessage(Lang.CHILL_CHILL_MAN.toString());
+                                    player.sendMessage(Lang.CHILL_CHILL_MAN.toString());
                                 } else {
                                     saveInProgress = true;
-                                    Bukkit.getScheduler().runTaskAsynchronously(MusicBox.getInstance(), () -> {
+                                    FoliaUtils.runAsync(() -> {
                                         model.save();
-                                        wrapper.getPlayer().sendMessage(Lang.PLAYLIST_SAVED.toString("{playlist}", model.getName()));
-                                        saveInProgress = false;
+                                        FoliaUtils.runAtPlayer(player, () -> {
+                                            player.sendMessage(Lang.PLAYLIST_SAVED.toString("{playlist}", model.getName()));
+                                            saveInProgress = false;
+                                        });
                                     });
                                 }
 
 
                             } else {
-                                wrapper.getPlayer().sendMessage(Lang.PLAYLIST_ZERO_SIZE.toString());
+                                player.sendMessage(Lang.PLAYLIST_ZERO_SIZE.toString());
                             }
                         }
                 )

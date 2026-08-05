@@ -22,6 +22,7 @@ import ru.spliterash.musicbox.customPlayers.playlist.SingletonPlayList;
 import ru.spliterash.musicbox.song.MusicBoxSong;
 import ru.spliterash.musicbox.song.songContainers.types.SongContainer;
 import ru.spliterash.musicbox.utils.BukkitUtils;
+import ru.spliterash.musicbox.utils.FoliaUtils;
 
 import java.util.Optional;
 
@@ -94,11 +95,11 @@ public class PlayerWrapper {
     }
 
     public static void clearAll() {
-        Bukkit
-                .getOnlinePlayers()
-                .stream()
-                .map(PlayerWrapper::getInstanceOptional)
-                .forEach(o -> o.ifPresent(PlayerWrapper::destroy));
+        // Destroy each wrapper on its owner's region thread: removing metadata and
+        // boss bars for a player from another region violates Folia's ownership.
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            FoliaUtils.runAtPlayer(player, () -> getInstanceOptional(player).ifPresent(PlayerWrapper::destroy));
+        }
     }
 
 

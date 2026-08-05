@@ -2,7 +2,6 @@ package ru.spliterash.musicbox.customPlayers.objects;
 
 import com.cryptomorin.xseries.XMaterial;
 import lombok.Getter;
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
@@ -18,6 +17,7 @@ import ru.spliterash.musicbox.minecraft.nms.versionutils.VersionUtils;
 import ru.spliterash.musicbox.minecraft.nms.versionutils.VersionUtilsFactory;
 import ru.spliterash.musicbox.utils.BukkitUtils;
 import ru.spliterash.musicbox.utils.FaceUtils;
+import ru.spliterash.musicbox.utils.FoliaUtils;
 import ru.spliterash.musicbox.utils.SignUtils;
 
 import java.util.List;
@@ -104,7 +104,7 @@ public class SignPlayer extends AbstractBlockPlayer {
     public static void restorePreventedPlayers() {
         List<Location> locations = DatabaseLoader.getBase().getPreventedSigns();
         for (Location location : locations) {
-            BukkitUtils.runSyncTask(() -> {
+            FoliaUtils.runAtLocation(location, () -> {
                 @NotNull BlockState b = location.getBlock().getState();
                 if (b instanceof Sign) {
                     Sign sign = (Sign) b;
@@ -121,7 +121,7 @@ public class SignPlayer extends AbstractBlockPlayer {
     }
 
     private void pingLever() {
-        BukkitUtils.runSyncTask(() -> {
+        FoliaUtils.runAtLocation(getTargetLocation(), () -> {
             @NotNull Block block = getTargetLocation().getBlock();
             BlockFace face = VersionUtilsFactory.getInstance().getRotation(block);
             face = FaceUtils.invertFace(face);
@@ -130,8 +130,7 @@ public class SignPlayer extends AbstractBlockPlayer {
             if (XMaterial.matchXMaterial(leverBlock.getType()) == XMaterial.LEVER) {
                 VersionUtils utils = VersionUtilsFactory.getInstance();
                 utils.setLever(leverBlock, true);
-                Bukkit.getScheduler().runTaskLater(MusicBox.getInstance(), () ->
-                        utils.setLever(leverBlock, false), 10);
+                FoliaUtils.runDelayedAtLocation(leverBlock.getLocation(), () -> utils.setLever(leverBlock, false), 10);
             }
         });
     }
@@ -148,11 +147,10 @@ public class SignPlayer extends AbstractBlockPlayer {
 
     @Override
     protected void every100MillisAsync() {
-        BukkitUtils.runSyncTask(() -> {
-            Block b = getTargetLocation().getBlock();
-            if (!(b.getState() instanceof Sign) || !b.isBlockIndirectlyPowered())
-                destroy();
-        });
+        // Already running on this block's region thread (see AbstractBlockPlayer ticker).
+        Block b = getTargetLocation().getBlock();
+        if (!(b.getState() instanceof Sign) || !b.isBlockIndirectlyPowered())
+            destroy();
     }
 
     @Override

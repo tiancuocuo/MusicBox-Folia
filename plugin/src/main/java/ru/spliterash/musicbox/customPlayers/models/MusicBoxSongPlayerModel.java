@@ -15,7 +15,9 @@ import java.util.function.Function;
 
 @Getter
 public class MusicBoxSongPlayerModel {
-    private final static Set<MusicBoxSongPlayerModel> all = Collections.newSetFromMap(new WeakHashMap<>());
+    // WeakHashMap keeps destroyed models collectable, the synchronized wrapper makes
+    // it safe against concurrent adds from Folia's many region threads.
+    private final static Set<MusicBoxSongPlayerModel> all = Collections.synchronizedSet(Collections.newSetFromMap(new WeakHashMap<>()));
     private final MusicBoxSongPlayer musicBoxSongPlayer;
     private final IPlayList playList;
     private final Function<IPlayList, ? extends MusicBoxSongPlayer> nextSongRunnable;
@@ -34,8 +36,18 @@ public class MusicBoxSongPlayerModel {
     }
 
     public static void destroyAll() {
-        all.forEach(a -> a.getMusicBoxSongPlayer().destroy());
-        all.clear();
+        // Iterate over a snapshot: destroying a player may trigger the song-end
+        // chain which registers new models in {@link #all} on a region thread.
+        List<MusicBoxSongPlayerModel> snapshot;
+        synchronized (all) {
+            snapshot = new ArrayList<>(all);
+        }
+        for (MusicBoxSongPlayerModel model : snapshot) {
+            model.getMusicBoxSongPlayer().destroy();
+        }
+        synchronized (all) {
+            all.clear();
+        }
     }
 
     public MusicBoxSong getCurrentSong() {

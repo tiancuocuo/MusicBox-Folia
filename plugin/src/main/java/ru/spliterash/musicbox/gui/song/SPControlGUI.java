@@ -1,6 +1,7 @@
 package ru.spliterash.musicbox.gui.song;
 
 import com.cryptomorin.xseries.XMaterial;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -15,6 +16,7 @@ import ru.spliterash.musicbox.minecraft.gui.actions.ClickAction;
 import ru.spliterash.musicbox.minecraft.gui.actions.PlayerClickAction;
 import ru.spliterash.musicbox.song.MusicBoxSong;
 import ru.spliterash.musicbox.utils.BukkitUtils;
+import ru.spliterash.musicbox.utils.FoliaUtils;
 import ru.spliterash.musicbox.utils.ItemUtils;
 import ru.spliterash.musicbox.utils.SongUtils;
 import ru.spliterash.musicbox.utils.StringUtils;
@@ -87,10 +89,14 @@ public class SPControlGUI {
     }
 
     public void openNext(MusicBoxSongPlayerModel nextModel) {
-        Set<Player> set = BukkitUtils.findOpenPlayers(gui);
-        if (set.size() > 0) {
-            SPControlGUI g = nextModel.getControlGUI();
-            set.forEach(g::open);
+        SPControlGUI next = nextModel.getControlGUI();
+        // Iterate online players (safe to read the player list from any thread) and
+        // check each viewer on their own region thread before re-opening the GUI.
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            FoliaUtils.runAtPlayer(p, () -> {
+                if (gui.equals(p.getOpenInventory().getTopInventory().getHolder()))
+                    next.open(p);
+            });
         }
     }
 

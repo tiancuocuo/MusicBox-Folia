@@ -27,6 +27,7 @@ import ru.spliterash.musicbox.gui.GUIActions;
 import ru.spliterash.musicbox.minecraft.nms.versionutils.VersionUtilsFactory;
 import ru.spliterash.musicbox.players.PlayerWrapper;
 import ru.spliterash.musicbox.utils.FaceUtils;
+import ru.spliterash.musicbox.utils.FoliaUtils;
 import ru.spliterash.musicbox.utils.RedstoneUtils;
 import ru.spliterash.musicbox.utils.StringUtils;
 
@@ -103,12 +104,16 @@ public class Handler implements Listener {
         @NotNull Chunk chunk = e.getChunk();
         Set<? extends AbstractBlockPlayer> playersInChunk = AbstractBlockPlayer.findByChunk(chunk.getWorld(), chunk.getX(), chunk.getZ());
         for (AbstractBlockPlayer player : playersInChunk) {
-            if (player instanceof SignPlayer) {
-                SignPlayer signPlayer = (SignPlayer) player;
-                if (signPlayer.isPreventDestroy()) {
-                    chunkCanceller.accept(e);
-                    return;
+            if (player instanceof SignPlayer && ((SignPlayer) player).isPreventDestroy()) {
+                if (FoliaUtils.isFolia()) {
+                    // Folia cannot safely force-keep a chunk from an unload handler
+                    // (Chunk#load on a region thread is unsafe). Keep the player
+                    // registered: its region task pauses while the chunk is unloaded
+                    // and resumes when the region ticks again.
+                    continue;
                 }
+                chunkCanceller.accept(e);
+                return;
             }
             player.destroy();
         }

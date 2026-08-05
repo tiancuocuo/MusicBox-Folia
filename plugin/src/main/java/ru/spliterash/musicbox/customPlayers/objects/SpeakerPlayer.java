@@ -6,8 +6,6 @@ import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.IllegalPluginAccessException;
-import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.scheduler.BukkitTask;
 import ru.spliterash.musicbox.MusicBox;
 import ru.spliterash.musicbox.customPlayers.interfaces.IPlayList;
 import ru.spliterash.musicbox.customPlayers.interfaces.PlayerSongPlayer;
@@ -28,7 +26,6 @@ public class SpeakerPlayer extends EntitySongPlayer implements PlayerSongPlayer,
     private final MusicBoxSongPlayerModel musicBoxModel;
     private final PlayerPlayerModel model;
     private final RangePlayerModel rangeModel;
-    private final BukkitTask task;
     private final PlayerWrapper owner;
 
     public SpeakerPlayer(IPlayList list, PlayerWrapper wrapper) {
@@ -41,21 +38,8 @@ public class SpeakerPlayer extends EntitySongPlayer implements PlayerSongPlayer,
         setRange(MusicBox.getInstance().getConfigObject().getSpeakerRadius());
 
         musicBoxModel.runPlayer();
-        task = new BukkitRunnable() {
-            @Override
-            public void run() {
-                while (!isDestroyed()) {
-                    rangeModel.tick();
-                    try {
-                        //noinspection BusyWait
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                        break;
-                    }
-                }
-            }
-        }.runTaskAsynchronously(MusicBox.getInstance());
+        // Listener tracking + auto-destroy are handled by RangePlayerModel's
+        // event-driven membership updates and its owner-region ticker.
     }
 
     @Override

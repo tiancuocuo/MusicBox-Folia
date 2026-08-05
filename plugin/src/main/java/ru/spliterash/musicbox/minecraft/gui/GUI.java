@@ -13,6 +13,7 @@ import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import ru.spliterash.musicbox.MusicBox;
 import ru.spliterash.musicbox.utils.BukkitUtils;
+import ru.spliterash.musicbox.utils.FoliaUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -42,7 +43,9 @@ public class GUI implements InventoryHolder {
     }
 
     private void createInventory(String title, int rows) {
-        if (Bukkit.isPrimaryThread())
+        // On Folia there is no primary thread; GUIs are built on region threads
+        // where creating a custom (non world-backed) inventory is already safe.
+        if (Bukkit.isPrimaryThread() || FoliaUtils.isFolia())
             inventory = Bukkit.createInventory(this, 9 * rows, title);
         else {
             try {
@@ -63,7 +66,7 @@ public class GUI implements InventoryHolder {
     }
 
     public void open(Player player) {
-        BukkitUtils.runSyncTask(() -> player.openInventory(getInventory()));
+        BukkitUtils.runSyncTask(player, () -> player.openInventory(getInventory()));
     }
 
     public void clear() {

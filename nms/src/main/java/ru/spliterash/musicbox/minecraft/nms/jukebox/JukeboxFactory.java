@@ -1,9 +1,11 @@
 package ru.spliterash.musicbox.minecraft.nms.jukebox;
 
+import org.bukkit.Bukkit;
 import org.bukkit.block.Jukebox;
 import ru.spliterash.musicbox.minecraft.nms.NMSUtils;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.logging.Level;
 
 public class JukeboxFactory {
     private static final String START_PATH = "ru.spliterash.musicbox.minecraft.nms.jukebox.versions.";
@@ -14,7 +16,10 @@ public class JukeboxFactory {
         int iV = NMSUtils.parseMajorVersion(raw);
 
         String className;
-        if (iV == 21) {
+        if (iV >= 26) {
+            // Calendar-versioned servers (26.x): pure-API implementation.
+            className = START_PATH + "V26_2";
+        } else if (iV == 21) {
             switch (raw) {
                 case "1.21":
                 case "1.21.1":
@@ -73,17 +78,20 @@ public class JukeboxFactory {
         else
             className = null;
 
-        if (className == null)
-            throw new IllegalArgumentException("Unsupported version: " + raw);
         Class<? extends IJukebox> tmpClass = null;
-        try {
-            //noinspection unchecked
-            tmpClass = (Class<? extends IJukebox>) Class.forName(className);
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        } finally {
-            clazz = tmpClass;
+        if (className != null) {
+            try {
+                //noinspection unchecked
+                tmpClass = (Class<? extends IJukebox>) Class.forName(className);
+            } catch (Throwable t) {
+                // Degrade gracefully: the jukebox feature becomes unavailable but the
+                // rest of the plugin keeps working.
+                Bukkit.getLogger().log(Level.WARNING, "[MusicBox] Jukebox support unavailable for " + raw, t);
+            }
+        } else {
+            Bukkit.getLogger().warning("[MusicBox] Unsupported version for jukeboxes: " + raw);
         }
+        clazz = tmpClass;
     }
 
     public static boolean jukeboxAvailable() {

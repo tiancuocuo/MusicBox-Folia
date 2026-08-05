@@ -9,7 +9,8 @@ plugins {
 bukkit {
     name = "MusicBox"
     main = "ru.spliterash.musicbox.MusicBox"
-    apiVersion = "1.13"
+    apiVersion = "1.21"
+    foliaSupported = true
     authors = listOf("Spliterash")
     depend = listOf("NoteBlockAPI")
     softDepend = listOf("Vault")
@@ -30,6 +31,7 @@ allprojects {
         mavenCentral()
         mavenLocal()
 
+        maven("https://repo.papermc.io/repository/maven-public")
         maven("https://jitpack.io")
         maven("https://repo.codemc.org/repository/maven-public")
         maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots/")

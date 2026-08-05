@@ -42,6 +42,47 @@ public class BukkitUtils {
     }
 
     public void runSyncTask(Runnable runnable) {
+        if (FoliaUtils.isFolia()) {
+            if (MusicBox.getInstance().isEnabled())
+                FoliaUtils.runSyncGlobal(runnable);
+            return;
+        }
+        if (Bukkit.isPrimaryThread())
+            runnable.run();
+        else if (MusicBox.getInstance().isEnabled())
+            Bukkit.getScheduler().runTask(MusicBox.getInstance(), runnable);
+    }
+
+    /**
+     * Runs immediately when already on the region owning {@code location},
+     * otherwise schedules on that region. Safe for block access.
+     */
+    public void runSyncTask(Location location, Runnable runnable) {
+        if (FoliaUtils.isFolia()) {
+            if (Bukkit.isOwnedByCurrentRegion(location))
+                runnable.run();
+            else if (MusicBox.getInstance().isEnabled())
+                FoliaUtils.runAtLocation(location, runnable);
+            return;
+        }
+        if (Bukkit.isPrimaryThread())
+            runnable.run();
+        else if (MusicBox.getInstance().isEnabled())
+            Bukkit.getScheduler().runTask(MusicBox.getInstance(), runnable);
+    }
+
+    /**
+     * Runs immediately when already on the player's region, otherwise schedules
+     * there. Safe for player/inventory operations.
+     */
+    public void runSyncTask(Player player, Runnable runnable) {
+        if (FoliaUtils.isFolia()) {
+            if (Bukkit.isOwnedByCurrentRegion(player))
+                runnable.run();
+            else if (MusicBox.getInstance().isEnabled())
+                player.getScheduler().execute(MusicBox.getInstance(), runnable, () -> {}, 0L);
+            return;
+        }
         if (Bukkit.isPrimaryThread())
             runnable.run();
         else if (MusicBox.getInstance().isEnabled())
@@ -89,6 +130,10 @@ public class BukkitUtils {
     }
 
     public void checkPrimary() {
+        // Folia has no single primary thread; region correctness is enforced by
+        // dispatching callers onto the owning region instead.
+        if (FoliaUtils.isFolia())
+            return;
         if (!Bukkit.isPrimaryThread())
             throw new RuntimeException("Call this only in primary thread");
     }

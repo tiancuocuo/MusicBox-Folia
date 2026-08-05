@@ -18,6 +18,7 @@ import ru.spliterash.musicbox.db.DatabaseLoader;
 import ru.spliterash.musicbox.gui.GUIActions;
 import ru.spliterash.musicbox.players.PlayerWrapper;
 import ru.spliterash.musicbox.song.MusicBoxSongManager;
+import ru.spliterash.musicbox.utils.FoliaUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -41,7 +42,7 @@ public final class MusicBox extends JavaPlugin {
         saveDefaultValues();
         registerCommand("musicbox", new MusicBoxExecutor());
         Bukkit.getPluginManager().registerEvents(new Handler(), this);
-        Bukkit.getScheduler().runTaskAsynchronously(this, this::reloadPlugin);
+        FoliaUtils.runAsync(this::reloadPlugin);
     }
 
     public void sendMessage(String pex, String noPexMessage, String message) {
@@ -56,6 +57,8 @@ public final class MusicBox extends JavaPlugin {
     private void saveDefaultValues() {
         boolean firstRun = !getDataFolder().isDirectory();
         saveDefaultConfig();
+        // Ship the bundled Simplified Chinese language file so `lang: zh` works out of the box.
+        saveResource("lang/zh.yml", false);
         if (firstRun)
             saveMyMusic();
     }
