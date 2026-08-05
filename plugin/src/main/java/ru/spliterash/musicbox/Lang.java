@@ -605,7 +605,16 @@ public enum Lang {
             "&b/musicbox upload <имя>&6 - Загрузить свою .nbs пластинку"),
     COMMAND_HELP_MYDISCS(
             "&b/musicbox mydiscs&6 - Show my custom discs",
-            "&b/musicbox mydiscs&6 - Мои пластинки");
+            "&b/musicbox mydiscs&6 - Мои пластинки"),
+    DISC_FILE_MISSING(
+            "&cThe file of this disc is missing on the server",
+            "&cФайл этой пластинки отсутствует на сервере"),
+    DISC_ERROR(
+            "&cOperation failed, please try again later",
+            "&cОшибка операции, попробуйте позже"),
+    UPLOAD_DB_ERROR(
+            "&cFailed to save the upload, please try again",
+            "&cНе удалось сохранить загрузку, попробуйте ещё раз");
     /**
      * Оригинальные переводы
      * 0 индекс - англиский

@@ -24,6 +24,7 @@ import ru.spliterash.musicbox.song.MusicBoxSongManager;
 import ru.spliterash.musicbox.utils.BukkitUtils;
 import ru.spliterash.musicbox.utils.EconomyUtils;
 import ru.spliterash.musicbox.utils.FoliaUtils;
+import ru.spliterash.musicbox.utils.StringUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -75,8 +76,9 @@ public final class CustomDiscManager {
         for (CustomDiscModel disc : discs) {
             File file = disc.toFile();
             if (!file.isFile()) {
-                // orphaned row: file is gone, drop it
-                DatabaseLoader.getBase().deleteCustomDisc(disc.getDiscId());
+                // keep the record so the player can still see and delete it in the list
+                MusicBox.getInstance().getLogger().warning(
+                        "Custom disc file missing: " + disc.getFilePath() + " (record kept for cleanup)");
                 continue;
             }
             try {
@@ -223,17 +225,22 @@ public final class CustomDiscManager {
             return UploadResult.fail(Lang.UPLOAD_NOT_NBS.toPlainText());
         }
 
-        DatabaseLoader.getBase().saveCustomDisc(new CustomDiscModel(
-                owner, discId, songName, file.getAbsolutePath(), System.currentTimeMillis()));
-        DatabaseLoader.getBase().consumeUploadSlot(token);
-
         try {
+            DatabaseLoader.getBase().saveCustomDisc(new CustomDiscModel(
+                    owner, discId, songName, file.getAbsolutePath(), System.currentTimeMillis()));
+            DatabaseLoader.getBase().consumeUploadSlot(token);
+
             MusicBoxSong mbSong = new MusicBoxSong(file, songName);
             songsByDiscId.put(discId, mbSong);
             MusicBoxSongManager.registerCustomSongs(Collections.singletonList(mbSong));
         } catch (Exception ex) {
-            MusicBox.getInstance().getLogger().severe("Can't register uploaded song " + file + ": " + ex);
-            return UploadResult.fail(Lang.UPLOAD_NOT_NBS.toPlainText());
+            // roll back the saved file so no orphan accumulates on a DB/registration failure
+            try {
+                Files.deleteIfExists(file.toPath());
+            } catch (IOException ignored) {
+            }
+            MusicBox.getInstance().getLogger().severe("Can't persist uploaded song " + file + ": " + ex);
+            return UploadResult.fail(Lang.UPLOAD_DB_ERROR.toPlainText());
         }
 
         notifyUploadSuccess(owner, songName);
@@ -302,7 +309,9 @@ public final class CustomDiscManager {
 
     private BaseComponent[] buildDiscLine(int num, CustomDiscModel disc, MusicBoxConfig.UploadSetting setting) {
         List<BaseComponent> parts = new ArrayList<>();
-        Collections.addAll(parts, TextComponent.fromLegacyText("&7" + num + ". &b" + disc.getSongName() + "  "));
+        // fromLegacyText only understands § codes, so translate & colours first
+        Collections.addAll(parts, TextComponent.fromLegacyText(
+                StringUtils.t("&7" + num + ". &b" + disc.getSongName() + "  ")));
 
         TextComponent give = new TextComponent(Lang.MYDISCS_GIVE.toString());
         give.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/musicbox givecd " + disc.getDiscId()));
@@ -328,27 +337,61 @@ public final class CustomDiscManager {
             return;
         }
         FoliaUtils.runAsync(() -> {
-            CustomDiscModel disc = DatabaseLoader.getBase().getCustomDisc(discId);
-            MusicBoxSong song = songsByDiscId.get(discId);
-            if (disc == null || song == null || !disc.getOwner().equals(player.getUniqueId())) {
-                runAtPlayerIfOnline(player, () -> player.sendMessage(Lang.DISC_NOT_FOUND.toString()));
-                return;
-            }
-            runAtPlayerIfOnline(player, () -> {
-                if (!player.isOnline())
-                    return;
-                if (!EconomyUtils.canBuy(player, setting.getGivePrice()))
-                    return;
-                ItemStack stack = song.getSongStack();
-                HashMap<Integer, ItemStack> left = player.getInventory().addItem(stack);
-                if (!left.isEmpty()) {
-                    player.sendMessage(Lang.NO_INVENTORY_SPACE.toString());
+            try {
+                CustomDiscModel disc = DatabaseLoader.getBase().getCustomDisc(discId);
+                if (disc == null || !disc.getOwner().equals(player.getUniqueId())) {
+                    runAtPlayerIfOnline(player, () -> player.sendMessage(Lang.DISC_NOT_FOUND.toString()));
                     return;
                 }
-                EconomyUtils.buyNoMessage(player, setting.getGivePrice());
-                player.sendMessage(Lang.DISC_GIVEN.toString("{disc}", song.getName()));
-            });
+                MusicBoxSong song = songsByDiscId.get(discId);
+                if (song == null) {
+                    // self-heal: the registry may have lost the entry (e.g. a reload raced)
+                    song = reRegister(disc);
+                }
+                if (song == null) {
+                    runAtPlayerIfOnline(player, () -> player.sendMessage(Lang.DISC_FILE_MISSING.toString()));
+                    return;
+                }
+                final MusicBoxSong finalSong = song;
+                runAtPlayerIfOnline(player, () -> {
+                    if (!player.isOnline())
+                        return;
+                    if (!EconomyUtils.canBuy(player, setting.getGivePrice()))
+                        return;
+                    ItemStack stack = finalSong.getSongStack();
+                    HashMap<Integer, ItemStack> left = player.getInventory().addItem(stack);
+                    if (!left.isEmpty()) {
+                        player.sendMessage(Lang.NO_INVENTORY_SPACE.toString());
+                        return;
+                    }
+                    EconomyUtils.buyNoMessage(player, setting.getGivePrice());
+                    player.sendMessage(Lang.DISC_GIVEN.toString("{disc}", finalSong.getName()));
+                });
+            } catch (Exception ex) {
+                MusicBox.getInstance().getLogger().severe("givecd failed for " + discId + ": " + ex);
+                runAtPlayerIfOnline(player, () -> player.sendMessage(Lang.DISC_ERROR.toString()));
+            }
         });
+    }
+
+    /**
+     * Re-creates and re-registers the {@link MusicBoxSong} for a disc from its stored
+     * file, so a lost registry entry self-heals instead of failing the give.
+     */
+    private MusicBoxSong reRegister(CustomDiscModel disc) {
+        File file = disc.toFile();
+        if (!file.isFile())
+            return null;
+        try {
+            MusicBoxSong song = new MusicBoxSong(file, disc.getSongName());
+            songsByDiscId.put(disc.getDiscId(), song);
+            MusicBoxSongManager.registerCustomSongs(Collections.singletonList(song));
+            return song;
+        } catch (Exception ex) {
+            MusicBox.getInstance().getLogger().warning(
+                    "Can't re-register custom disc " + disc.getDiscId() + ": " + ex);
+            return null;
+        }
     }
 
     /**
@@ -362,7 +405,8 @@ public final class CustomDiscManager {
                 return;
             }
             runAtPlayerIfOnline(player, () -> {
-                TextComponent confirm = new TextComponent(Lang.MYDISCS_DELETE.toString() + " &7(再次点击确认)");
+                TextComponent confirm = new TextComponent(StringUtils.t(
+                        Lang.MYDISCS_DELETE.toString() + " &7(再次点击确认)"));
                 confirm.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,
                         "/musicbox delcd " + discId + " confirm"));
                 player.spigot().sendMessage(confirm);
@@ -379,15 +423,40 @@ public final class CustomDiscManager {
             }
             DatabaseLoader.getBase().deleteCustomDisc(discId);
             File file = disc.toFile();
-            if (file.isFile())
-                //noinspection ResultOfMethodCallIgnored
-                file.delete();
+            if (file.isFile() && !deleteFileWithRetry(file)) {
+                MusicBox.getInstance().getLogger().warning(
+                        "Can't delete custom disc file (may be locked), left as orphan: " + file);
+            }
             MusicBoxSong song = songsByDiscId.remove(discId);
             if (song != null)
                 MusicBoxSongManager.unregisterCustomSong(song);
             runAtPlayerIfOnline(player, () ->
                     player.sendMessage(Lang.DISC_DELETED.toString("{disc}", disc.getSongName())));
         });
+    }
+
+    /**
+     * Deletes a file, retrying once after a short delay: on Windows a freshly
+     * written file can be briefly locked (antivirus / indexer).
+     */
+    private static boolean deleteFileWithRetry(File file) {
+        try {
+            Files.deleteIfExists(file.toPath());
+            return true;
+        } catch (IOException | SecurityException ignored) {
+        }
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+        try {
+            Files.deleteIfExists(file.toPath());
+            return true;
+        } catch (IOException | SecurityException ignored) {
+            return false;
+        }
     }
 
     private static void runAtPlayerIfOnline(Player player, Runnable runnable) {
