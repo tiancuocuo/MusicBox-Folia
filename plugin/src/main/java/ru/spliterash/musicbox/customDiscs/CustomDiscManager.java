@@ -246,7 +246,6 @@ public final class CustomDiscManager {
             return UploadResult.fail(Lang.UPLOAD_DB_ERROR.toPlainText());
         }
 
-        notifyUploadSuccess(owner, songName);
         return UploadResult.ok(Lang.UPLOAD_SUCCESS.toPlainText("{disc}", songName));
     }
 
