@@ -527,7 +527,85 @@ public enum Lang {
     JUKEBOX_NOT_SUPPORTED(
             "&cCurrent version not support for jukebox play",
             "&cТекущая версия плагина не поддерживает воспроизведение пластинок"
-    );
+    ),
+    UPLOAD_USAGE(
+            "&6Usage: &b/musicbox upload <name>",
+            "&6Использование: &b/musicbox upload <имя>"),
+    ECONOMY_DISABLED(
+            "&6Economy is disabled on this server",
+            "&6Экономика на этом сервере отключена"),
+    UPLOAD_NO_DISC(
+            "&cYou need a music disc in your inventory to create a custom disc",
+            "&cВам нужна пластинка в инвентаре, чтобы создать свою пластинку"),
+    UPLOAD_LIMIT(
+            "&cYou can only own {max} custom discs",
+            "&cВы можете иметь не более {max} своих пластинок"),
+    UPLOAD_SLOT_CREATED(
+            "&6Upload slot created. You have &b{minutes}&6 minutes to upload your .nbs file",
+            "&6Слот загрузки создан. У вас есть &b{minutes}&6 минут чтобы загрузить .nbs файл"),
+    UPLOAD_LINK(
+            "&6Click here to open the upload page",
+            "&6Нажмите чтобы открыть страницу загрузки"),
+    UPLOAD_LINK_HOVER(
+            "&b{custom_name}&7 的 .nbs 上传链接",
+            "&b{custom_name}&7 .nbs загрузка"),
+    UPLOAD_EXPIRED(
+            "&cThe upload link has expired",
+            "&cСрок действия ссылки истёк"),
+    UPLOAD_INVALID_TOKEN(
+            "&cInvalid upload link",
+            "&cНеверная ссылка"),
+    UPLOAD_NOT_NBS(
+            "&cThe uploaded file is not a valid .nbs song",
+            "&cЗагруженный файл не является валидной .nbs мелодией"),
+    UPLOAD_TOO_BIG(
+            "&cThe file is too big (max {max} MB)",
+            "&cФайл слишком большой (макс. {max} МБ)"),
+    UPLOAD_SERVER_DISABLED(
+            "&cThe upload service is disabled",
+            "&cСервис загрузки отключён"),
+    MYDISCS_TITLE(
+            "&6&lYour custom discs&r &8({count}/{max})",
+            "&6&lВаши пластинки&r &8({count}/{max})"),
+    MYDISCS_EMPTY(
+            "&7You have no custom discs yet. Use &b/musicbox upload <name>&7 to create one",
+            "&7У вас пока нет своих пластинок. Используйте &b/musicbox upload <имя>&7 чтобы создать"),
+    MYDISCS_GIVE(
+            "&a[给予]",
+            "&a[Выдать]"),
+    MYDISCS_GIVE_HOVER(
+            "&7重新获得这张唱片，花费 &6{price}&7 金币",
+            "&7Получить пластинку за &6{price}&7 $"),
+    MYDISCS_DELETE(
+            "&c[删除]",
+            "&c[Удалить]"),
+    MYDISCS_DELETE_HOVER(
+            "&7删除这张自定义唱片",
+            "&7Удалить эту пластинку"),
+    DISC_GIVEN(
+            "&6You got the disc &b{disc}",
+            "&6Вы получили пластинку &b{disc}"),
+    DISC_NOT_FOUND(
+            "&cDisc not found",
+            "&cПластинка не найдена"),
+    DISC_NOT_YOURS(
+            "&cThis is not your disc",
+            "&cЭто не ваша пластинка"),
+    DISC_DELETED(
+            "&6You deleted the disc &b{disc}",
+            "&6Вы удалили пластинку &b{disc}"),
+    UPLOAD_WELCOME(
+            "&6Welcome to the custom disc upload page",
+            "&6Добро пожаловать на страницу загрузки пластинок"),
+    UPLOAD_SUCCESS(
+            "&aUpload successful! Your disc &b{disc}&a is ready in game",
+            "&aЗагрузка успешна! Ваша пластинка &b{disc}&a готова в игре"),
+    COMMAND_HELP_UPLOAD(
+            "&b/musicbox upload <name>&6 - Upload your custom .nbs disc",
+            "&b/musicbox upload <имя>&6 - Загрузить свою .nbs пластинку"),
+    COMMAND_HELP_MYDISCS(
+            "&b/musicbox mydiscs&6 - Show my custom discs",
+            "&b/musicbox mydiscs&6 - Мои пластинки");
     /**
      * Оригинальные переводы
      * 0 индекс - англиский

@@ -31,10 +31,25 @@ public class MusicBoxSong {
     private final int hash;
 
     MusicBoxSong(File songFile, MusicBoxSongContainer container) {
+        this(songFile, container, null);
+    }
+
+    /**
+     * Creates a song with an explicit display name, used for player-uploaded custom
+     * discs where the name chosen by the player must be kept regardless of the
+     * .nbs file's internal title. The container is left null: such songs are not
+     * part of the folder GUI tree, they only live in the song registry.
+     */
+    public MusicBoxSong(File songFile, String overrideName) {
+        this(songFile, null, overrideName);
+    }
+
+    private MusicBoxSong(File songFile, MusicBoxSongContainer container, String overrideName) {
         this.file = songFile;
         this.container = container;
         Song song = getSong();
-        this.name = StringUtils.t(StringUtils.getOrEmpty(song.getTitle(), () -> FileUtils.getFilename(file.getName())));
+        String title = StringUtils.getOrEmpty(song.getTitle(), () -> FileUtils.getFilename(file.getName()));
+        this.name = StringUtils.t(overrideName == null || overrideName.isEmpty() ? title : overrideName);
         this.length = song.getLength();
         this.speed = song.getSpeed();
         this.hash = file.getPath().hashCode();

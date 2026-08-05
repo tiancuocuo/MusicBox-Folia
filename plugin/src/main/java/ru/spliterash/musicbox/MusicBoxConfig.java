@@ -44,4 +44,20 @@ public class MusicBoxConfig {
         private boolean enable;
         private double price;
     }
+
+    private UploadSetting upload;
+
+    @Getter
+    @NoArgsConstructor(access = AccessLevel.PRIVATE)
+    public static class UploadSetting {
+        private boolean enabled;
+        private String host;
+        private int port;
+        private String displayUrl;
+        private long maxFileSize;
+        private int maxDiscs;
+        private double uploadPrice;
+        private double givePrice;
+        private int tokenExpireMinutes;
+    }
 }

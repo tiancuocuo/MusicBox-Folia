@@ -35,7 +35,11 @@ public class SQLite extends AbstractBase {
 
     @Override
     protected Connection getConnection() throws SQLException {
-        return DriverManager.getConnection("jdbc:sqlite:" + file);
-
+        Connection connection = DriverManager.getConnection("jdbc:sqlite:" + file);
+        // concurrent writers (async reload / web upload threads) must wait, not fail
+        try (java.sql.Statement statement = connection.createStatement()) {
+            statement.execute("PRAGMA busy_timeout = 5000");
+        }
+        return connection;
     }
 }

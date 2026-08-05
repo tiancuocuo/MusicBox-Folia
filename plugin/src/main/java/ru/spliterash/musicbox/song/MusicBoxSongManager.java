@@ -24,7 +24,7 @@ public class MusicBoxSongManager {
     private final SongContainer masterContainer = new MasterContainer();
     // Для быстрого поиска
     @Getter
-    private List<MusicBoxSong> allSongs;
+    private volatile List<MusicBoxSong> allSongs = Collections.emptyList();
     @Getter
     private MusicBoxSongContainer rootContainer;
 
@@ -58,6 +58,31 @@ public class MusicBoxSongManager {
         rootContainer = new MusicBoxSongContainer(rootFolder, null, false);
         // ArrayList так как по нему быстрее искать элементы
         allSongs = Collections.unmodifiableList(new ArrayList<>(rootContainer.getAllSongs()));
+    }
+
+    /**
+     * Registers player-uploaded custom songs into the shared registry. The list is
+     * swapped atomically through a volatile reference, so concurrent readers on
+     * Folia region threads always observe a consistent snapshot.
+     */
+    public void registerCustomSongs(Collection<MusicBoxSong> songs) {
+        if (songs.isEmpty())
+            return;
+        List<MusicBoxSong> next = new ArrayList<>(allSongs.size() + songs.size());
+        next.addAll(allSongs);
+        next.addAll(songs);
+        allSongs = Collections.unmodifiableList(next);
+    }
+
+    /**
+     * Removes a player-uploaded song from the registry (disc deleted).
+     */
+    public void unregisterCustomSong(MusicBoxSong song) {
+        if (!allSongs.contains(song))
+            return;
+        List<MusicBoxSong> next = new ArrayList<>(allSongs);
+        next.remove(song);
+        allSongs = Collections.unmodifiableList(next);
     }
 
     public Optional<MusicBoxSong> findByName(String name) {

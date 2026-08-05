@@ -5,6 +5,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.Nullable;
+import ru.spliterash.musicbox.db.model.CustomDiscModel;
 import ru.spliterash.musicbox.db.model.PlayerPlayListModel;
 import ru.spliterash.musicbox.db.utils.NamedParamStatement;
 import ru.spliterash.musicbox.db.utils.ResultSetRow;
@@ -325,5 +326,91 @@ public abstract class AbstractBase {
         } catch (SQLException throwables) {
             throw new RuntimeException(throwables);
         }
+    }
+
+    // ================= Player custom disc uploads =================
+
+    /**
+     * Creates a pending upload slot. Only call off the primary/region thread
+     * (the query helper enforces this via {@link #largeQuery()}).
+     */
+    public void createUploadSlot(String token, UUID owner, String songName) {
+        largeQuery();
+        update("INSERT INTO pending_uploads (token, owner, song_name, created_at) values (?,?,?,?)",
+                token, owner.toString(), songName, System.currentTimeMillis());
+    }
+
+    /**
+     * Returns the pending upload row for a token, or {@code null} when unknown.
+     */
+    @Nullable
+    public ResultSetRow getUploadSlot(String token) {
+        largeQuery();
+        List<ResultSetRow> result = query(
+                "SELECT token, owner, song_name, created_at FROM pending_uploads WHERE token = ?",
+                token);
+        return result.isEmpty() ? null : result.get(0);
+    }
+
+    public void consumeUploadSlot(String token) {
+        largeQuery();
+        update("DELETE FROM pending_uploads WHERE token = ?", token);
+    }
+
+    public int countCustomDiscs(UUID owner) {
+        largeQuery();
+        return query("SELECT COUNT(*) as c FROM custom_discs WHERE owner = ?", owner.toString())
+                .get(0)
+                .getInt("c");
+    }
+
+    public List<CustomDiscModel> getCustomDiscs(UUID owner) {
+        largeQuery();
+        return query("SELECT owner, disc_id, song_name, file_path, created_at FROM custom_discs WHERE owner = ? ORDER BY created_at",
+                owner.toString())
+                .stream()
+                .map(this::customDiscFromRow)
+                .collect(Collectors.toList());
+    }
+
+    public List<CustomDiscModel> getAllCustomDiscs() {
+        largeQuery();
+        return query("SELECT owner, disc_id, song_name, file_path, created_at FROM custom_discs ORDER BY created_at")
+                .stream()
+                .map(this::customDiscFromRow)
+                .collect(Collectors.toList());
+    }
+
+    @Nullable
+    public CustomDiscModel getCustomDisc(String discId) {
+        largeQuery();
+        List<ResultSetRow> result = query(
+                "SELECT owner, disc_id, song_name, file_path, created_at FROM custom_discs WHERE disc_id = ?",
+                discId);
+        return result.isEmpty() ? null : customDiscFromRow(result.get(0));
+    }
+
+    public void saveCustomDisc(CustomDiscModel model) {
+        largeQuery();
+        update("INSERT INTO custom_discs (owner, disc_id, song_name, file_path, created_at) values (?,?,?,?,?)",
+                model.getOwner().toString(),
+                model.getDiscId(),
+                model.getSongName(),
+                model.getFilePath(),
+                model.getCreatedAt());
+    }
+
+    public void deleteCustomDisc(String discId) {
+        largeQuery();
+        update("DELETE FROM custom_discs WHERE disc_id = ?", discId);
+    }
+
+    private CustomDiscModel customDiscFromRow(ResultSetRow row) {
+        return new CustomDiscModel(
+                UUID.fromString(row.getString("owner")),
+                row.getString("disc_id"),
+                row.getString("song_name"),
+                row.getString("file_path"),
+                Long.parseLong(row.getString("created_at")));
     }
 }

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MusicBox 自定义唱片上传</title>
+<style>
+:root {
+  --green: #2ecc71;
+  --green-dark: #27ae60;
+  --green-light: #eafaf1;
+  --text: #213547;
+  --text-light: #6b7a88;
+  --border: #e2e8f0;
+  --bg: #f8fbf9;
+  --radius: 16px;
+  --shadow: 0 4px 24px rgba(33, 53, 71, 0.08);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  min-height: 100vh;
+  background: linear-gradient(160deg, #ffffff 0%, var(--bg) 100%);
+  color: var(--text);
+  display: flex; flex-direction: column; align-items: center;
+  padding: 48px 20px;
+}
+.brand { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+.brand .logo {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: linear-gradient(135deg, var(--green), var(--green-dark));
+  color: #fff; font-weight: 800; font-size: 22px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 12px rgba(46, 204, 113, 0.35);
+}
+.brand-text h1 { font-size: 20px; font-weight: 700; }
+.brand-text .sub { font-size: 13px; color: var(--text-light); }
+.tagline { color: var(--text-light); font-size: 14px; margin-top: 4px; }
+.card {
+  width: 100%; max-width: 460px; background: #fff;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 28px; margin-top: 28px;
+}
+.info { font-size: 13px; color: var(--text-light); text-align: center; margin-bottom: 18px; line-height: 1.7; }
+.info .count { color: var(--green-dark); font-weight: 700; }
+.drop-zone {
+  width: 100%; padding: 36px 20px;
+  border: 2px dashed var(--border); border-radius: 12px;
+  background: var(--green-light); color: var(--text-light);
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  text-align: center; cursor: pointer; font-size: 14px;
+  transition: border-color .2s ease, background-color .2s ease;
+}
+.drop-zone:hover, .drop-zone.highlight { border-color: var(--green); background: #d5f5e3; }
+.drop-zone .icon { font-size: 34px; display: block; }
+.drop-zone .file-name { color: var(--text); font-weight: 600; font-size: 13px; word-break: break-all; max-width: 100%; }
+.btn {
+  width: 100%; margin-top: 16px; padding: 13px;
+  border: none; border-radius: 10px; cursor: pointer;
+  background: linear-gradient(135deg, var(--green), var(--green-dark));
+  color: #fff; font-size: 15px; font-weight: 700; letter-spacing: 1px;
+  transition: opacity .2s ease, transform .1s ease;
+}
+.btn:hover:not(:disabled) { opacity: .92; }
+.btn:active:not(:disabled) { transform: scale(.98); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn.hidden { display: none; }
+.status {
+  margin-top: 14px; padding: 12px 14px; border-radius: 10px;
+  font-size: 13px; line-height: 1.6; display: none; text-align: center;
+}
+.status.show { display: block; }
+.status.ok { background: var(--green-light); color: var(--green-dark); }
+.status.err { background: #fdecea; color: #c0392b; }
+.expire { text-align: center; font-size: 12px; color: var(--text-light); margin-top: 16px; }
+.footer { margin-top: 24px; font-size: 12px; color: #aab5bf; }
+</style>
+</head>
+<body>
+<div class="brand">
+  <div class="logo">♪</div>
+  <div class="brand-text">
+    <h1>MusicBox 自定义唱片</h1>
+    <div class="sub">上传你的 .nbs 音乐，制作专属唱片</div>
+  </div>
+</div>
+<div class="tagline">只支持 .nbs 格式 · 每个玩家最多 5 张</div>
+
+<div class="card">
+  <div class="info" id="info">链接校验中…</div>
+  <div class="drop-zone" id="dropZone">
+    <span class="icon">🎵</span>
+    <span>点击选择文件，或将 .nbs 文件拖到这里</span>
+    <span class="file-name" id="fileName"></span>
+  </div>
+  <input type="file" id="fileInput" accept=".nbs" hidden>
+  <button class="btn hidden" id="uploadBtn">上传</button>
+  <div class="status" id="status"></div>
+  <div class="expire" id="expire"></div>
+</div>
+<div class="footer">MusicBox · 服务器内使用 /musicbox mydiscs 查看和管理你的唱片</div>
+
+<script>
+(function () {
+  var token = new URLSearchParams(location.search).get('token');
+  var info = document.getElementById('info');
+  var dropZone = document.getElementById('dropZone');
+  var fileInput = document.getElementById('fileInput');
+  var fileNameEl = document.getElementById('fileName');
+  var uploadBtn = document.getElementById('uploadBtn');
+  var statusEl = document.getElementById('status');
+  var expireEl = document.getElementById('expire');
+  var selectedFile = null;
+
+  function showStatus(ok, text) {
+    statusEl.className = 'status show ' + (ok ? 'ok' : 'err');
+    statusEl.textContent = text;
+  }
+
+  if (!token) {
+    info.innerHTML = '无效的链接，请回到游戏内使用 <b>/musicbox upload &lt;名称&gt;</b> 重新获取。';
+    dropZone.style.pointerEvents = 'none';
+    return;
+  }
+
+  fetch('/status?token=' + encodeURIComponent(token))
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.ok) {
+        info.innerHTML = '当前已上传 <b class="count">' + data.count + '</b> / ' + data.max + ' 张唱片';
+        if (data.expireMinutes > 0) {
+          expireEl.textContent = '链接有效期：' + data.expireMinutes + ' 分钟';
+        }
+      } else {
+        info.innerHTML = data.message;
+        dropZone.style.pointerEvents = 'none';
+      }
+    })
+    .catch(function () { info.textContent = '无法连接上传服务器'; });
+
+  function setFile(file) {
+    if (!file) return;
+    if (!/\.nbs$/i.test(file.name)) {
+      showStatus(false, '只支持 .nbs 格式的音乐文件');
+      return;
+    }
+    selectedFile = file;
+    fileNameEl.textContent = file.name + '（' + (file.size / 1024).toFixed(1) + ' KB）';
+    uploadBtn.classList.remove('hidden');
+    showStatus('', '');
+  }
+
+  dropZone.addEventListener('click', function () { fileInput.click(); });
+  dropZone.addEventListener('dragover', function (e) { e.preventDefault(); dropZone.classList.add('highlight'); });
+  dropZone.addEventListener('dragleave', function () { dropZone.classList.remove('highlight'); });
+  dropZone.addEventListener('drop', function (e) {
+    e.preventDefault();
+    dropZone.classList.remove('highlight');
+    if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', function () { if (fileInput.files.length) setFile(fileInput.files[0]); });
+
+  uploadBtn.addEventListener('click', function () {
+    if (!selectedFile) return;
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = '上传中…';
+    fetch('/upload?token=' + encodeURIComponent(token), { method: 'POST', body: selectedFile })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        showStatus(data.ok, data.message);
+        if (data.ok) {
+          uploadBtn.classList.add('hidden');
+          fileNameEl.textContent = '';
+          fetch('/status?token=' + encodeURIComponent(token))
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+              if (d.ok) info.innerHTML = '当前已上传 <b class="count">' + d.count + '</b> / ' + d.max + ' 张唱片';
+            })
+            .catch(function () {});
+        }
+      })
+      .catch(function () { showStatus(false, '上传失败：网络错误，请重试'); })
+      .finally(function () { uploadBtn.disabled = false; uploadBtn.textContent = '上传'; });
+  });
+})();
+</script>
+</body>
+</html>

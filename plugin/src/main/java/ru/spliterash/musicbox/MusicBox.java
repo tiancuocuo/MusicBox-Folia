@@ -11,6 +11,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import ru.spliterash.musicbox.commands.MusicBoxExecutor;
+import ru.spliterash.musicbox.customDiscs.CustomDiscManager;
 import ru.spliterash.musicbox.customPlayers.abstracts.AbstractBlockPlayer;
 import ru.spliterash.musicbox.customPlayers.models.MusicBoxSongPlayerModel;
 import ru.spliterash.musicbox.customPlayers.objects.SignPlayer;
@@ -57,8 +58,9 @@ public final class MusicBox extends JavaPlugin {
     private void saveDefaultValues() {
         boolean firstRun = !getDataFolder().isDirectory();
         saveDefaultConfig();
-        // Ship the bundled Simplified Chinese language file so `lang: zh` works out of the box.
-        saveResource("lang/zh.yml", false);
+        // Ship the bundled Simplified Chinese language file so `lang: zh` works out
+        // of the box and new keys always reach existing installs (overwrite).
+        saveResource("lang/zh.yml", true);
         if (firstRun)
             saveMyMusic();
     }
@@ -83,6 +85,7 @@ public final class MusicBox extends JavaPlugin {
         Lang.reload(new File(getDataFolder(), "lang"), configObject.getLang());
         PlayerWrapper.clearAll();
         MusicBoxSongManager.reload(new File(getDataFolder(), "songs"));
+        CustomDiscManager.getInstance().reload();
         GUIActions.reloadGUI();
         ItemStack stack;
 
@@ -113,6 +116,7 @@ public final class MusicBox extends JavaPlugin {
                 .collect(Collectors.toList());
         if (signLocations.size() > 0)
             DatabaseLoader.getBase().savePreventedSigns(signLocations);
+        CustomDiscManager.getInstance().stopServer();
         destroyAllPlayers();
     }
 

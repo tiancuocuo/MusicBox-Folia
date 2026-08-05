@@ -33,6 +33,37 @@ jukeboxRadius: 64
 # Enable or disable autodestroy range player if nobody hear him (Speaker mode, Sign,Jukeboxes) Time in seconds(0 disable)
 # Включить или выключить автоуничтожение проигрывателей если никто их не слышит в течении N секунд
 autoDestroy: 60
+# Player custom disc upload (custom .nbs upload via the embedded web server)
+# 玩家自定义唱片上传（内嵌网页上传 .nbs）
+upload:
+  # Enable or disable the upload service
+  # 是否启用上传服务
+  enabled: true
+  # Address in which the web server binds to, defaults to 0.0.0.0.
+  # Use 127.0.0.1 to limit to local access. Changing this value requires a restart.
+  # Web 服务器监听地址（0.0.0.0 表示所有网卡，127.0.0.1 仅本机）。修改后需要重启。
+  host: 0.0.0.0
+  # Port in which the web server is hosted, make sure it is not blocked by your firewall.
+  # Web 服务器端口（请确保防火墙已放行）。修改后需要重启。
+  port: 8518
+  # The link shown to players (use your public IP / domain).
+  # 展示给玩家的链接（换成你的公网 IP 或域名）
+  displayUrl: http://127.0.0.1:8518
+  # Maximum size of a single .nbs file in bytes (5 MB default)
+  # 单个 .nbs 文件的最大字节数（默认 5 MB）
+  maxFileSize: 5242880
+  # How many custom discs a player may own
+  # 每名玩家最多拥有的自定义唱片数
+  maxDiscs: 5
+  # Cost (in Vault money) to create an upload slot
+  # 创建上传插槽的花费（Vault 金币）
+  uploadPrice: 100
+  # Cost (in Vault money) to re-give an uploaded disc
+  # 重新获得一张自定义唱片的花费（Vault 金币）
+  givePrice: 50
+  # Upload token validity in minutes (0 = never expires)
+  # 上传链接有效时长（分钟，0 表示永久有效）
+  tokenExpireMinutes: 30
 # Нужно ли проверять пекс musicbox.hear. По дефолту он не проверяется и все могут слышать музыку,
 # но вдруг вам сильно приспичило и надо прям, тогда ставим true и теперь никто без этого пекса слышать музыку не может
 # ----

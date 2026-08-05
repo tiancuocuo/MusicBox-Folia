@@ -28,6 +28,10 @@ public class MusicBoxExecutor implements TabExecutor {
         subs.put("shutup", new ShutUp(this));
         subs.put("reload", new ReloadExecutor());
         subs.put("silent", new SilentExecutor());
+        subs.put("upload", new UploadExecutor());
+        subs.put("mydiscs", new MyDiscsExecutor());
+        subs.put("givecd", new MyGiveDiscExecutor());
+        subs.put("delcd", new MyDeleteDiscExecutor());
     }
 
     @Override
@@ -70,6 +74,8 @@ public class MusicBoxExecutor implements TabExecutor {
         if (sender.hasPermission("musicbox.give")) {
             sender.sendMessage(Lang.COMMAND_HELP_GIVE.toString());
         }
+        sender.sendMessage(Lang.COMMAND_HELP_UPLOAD.toString());
+        sender.sendMessage(Lang.COMMAND_HELP_MYDISCS.toString());
         if (sender.hasPermission("musicbox.admin")) {
             sender.sendMessage(Lang.ADMIN_HELP.toArray());
         }
@@ -82,6 +88,8 @@ public class MusicBoxExecutor implements TabExecutor {
             if (sender.hasPermission("musicbox.use")) {
                 tabComplete.add("play");
                 tabComplete.add("silent");
+                tabComplete.add("upload");
+                tabComplete.add("mydiscs");
                 if (sender instanceof Player)
                     tabComplete.add("playlist");
             }
