@@ -32,8 +32,10 @@ public class SpeakerPlayer extends EntitySongPlayer implements PlayerSongPlayer,
         super(list.getCurrent().getSong());
         this.musicBoxModel = new MusicBoxSongPlayerModel(this, list, SongUtils.nextPlayerSong(wrapper));
         this.model = new PlayerPlayerModel(wrapper, musicBoxModel);
-        this.rangeModel = new RangePlayerModel(musicBoxModel);
+        // owner must be assigned BEFORE constructing RangePlayerModel, which reads
+        // it back via getOwner() for the speaker's owner-region source tracking.
         this.owner = wrapper;
+        this.rangeModel = new RangePlayerModel(musicBoxModel);
         setEntity(wrapper.getPlayer());
         setRange(MusicBox.getInstance().getConfigObject().getSpeakerRadius());
 
